@@ -11,6 +11,6 @@ window.KK_CONFIG = {
   supabaseKey: "sb_publishable_togzYR7Y5-dxsqEi66lz_Q_5kXE4BOL",
 
   // Кіру аккаунттары (setup.sql-дағы мұғалім поштасымен бірдей болуы керек)
-  studentEmail: "oqushy@kulakka-kitap.kz",
+  studentEmail: "okushy@kulakka-kitap.kz",
   teacherEmail: "mugalim@kulakka-kitap.kz"
 };

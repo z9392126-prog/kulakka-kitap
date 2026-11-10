@@ -38,7 +38,7 @@
 
 1. Сол жақ мәзірден **Authentication → Users** бөлімін ашыңыз.
 2. **Add user → Create new user** батырмасын басыңыз:
-   - **Email:** `oqushy@kulakka-kitap.kz`
+   - **Email:** `okushy@kulakka-kitap.kz`
    - **Password:** оқушыларға беретін құпиясөз
    - ✅ **Auto Confirm User** белгісін қойыңыз
 3. Тағы бір пайдаланушы қосыңыз:
