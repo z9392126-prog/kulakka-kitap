@@ -12,10 +12,11 @@
   var TABS = [
     { id: "angimeler", name: "Әңгімелер", key: "stories" },
     { id: "suretter", name: "Ескі суреттер", key: "photos" },
-    { id: "sozdik", name: "Көне сөздер", key: "words" }
+    { id: "sozdik", name: "Көне сөздер", key: "words" },
+    { id: "algys", name: "Алғыс хаттар", key: "letters" }
   ];
 
-  var data = { stories: [], photos: [], words: [] };
+  var data = { stories: [], photos: [], words: [], letters: [] };
   var ui = {
     tab: "angimeler", topic: "Барлығы", q: "",
     loading: configured, loadError: false,
@@ -204,16 +205,48 @@
       '<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn" type="submit" ' + (ui.loginBusy ? "disabled" : "") + ">" + (ui.loginBusy ? "Тексерілуде…" : "Кіру") + '</button><button class="btn ghost" type="button" data-act="login-close">Болдырмау</button></div></form>';
   }
 
+  /* ---------- letters ---------- */
+  function lettersFiltered() {
+    return data.letters.slice().sort(function (a, b) { return (b.created_at || "").localeCompare(a.created_at || ""); })
+      .filter(function (l) { return match([l.to_whom, l.body, l.author]); });
+  }
+  function letterHtml(l) {
+    var d = delCtl("letters", l.id);
+    var st = l.story_id ? storyById(l.story_id) : null;
+    return '<article class="story letter-card">' +
+      '<div class="row"><span class="tag">Алғыс хат</span>' + (l.created_at ? '<span class="count">' + esc(fmtDate(l.created_at)) + "</span>" : "") + "</div>" +
+      "<h3>" + esc(l.to_whom) + "</h3>" +
+      (st ? '<div class="meta"><span>«' + esc(st.title) + "» әңгімесі үшін</span></div>" : "") +
+      (l.media_path ? '<button class="letter-img" data-act="zoom" data-id="' + esc(l.id) + '" aria-label="Хатты үлкейту"><img loading="lazy" src="' + esc(mediaUrl(l.media_path)) + '" alt="Алғыс хат: ' + esc(l.to_whom) + '"></button>' : "") +
+      (l.body ? '<div class="letter"><p>' + esc(l.body) + "</p>" + (l.author ? '<span class="sig">— ' + esc(l.author) + "</span>" : "") + "</div>" : (l.author ? '<p class="note">Жіберген: ' + esc(l.author) + "</p>" : "")) +
+      (d ? '<div class="row"><span></span>' + d + "</div>" : "") + "</article>";
+  }
+  function letterForm() {
+    var opts = '<option value="">— жалпы хат —</option>' + data.stories.map(function (s) {
+      return '<option value="' + esc(s.id) + '">' + esc(s.title) + " (" + esc(s.elder) + ")</option>";
+    }).join("");
+    return '<form class="panel" data-form="letter"><h2>Алғыс хат қосу</h2>' +
+      '<div class="grid2"><label>Кімге? *<input id="a-to" required maxlength="120" placeholder="Мысалы: Саят атаға / Ауыл ақсақалдарына"></label>' +
+      '<label>Кімнен?<input id="a-author" maxlength="80" placeholder="Мысалы: Жадыра, 6-сынып / 6-сынып оқушылары"></label></div>' +
+      '<label>Қай әңгіме үшін?<select id="a-story">' + opts + "</select></label>" +
+      '<label>Хаттың мәтіні<textarea id="a-body" rows="6" maxlength="2000" placeholder="Құрметті атажан! …"></textarea></label>' +
+      '<label>Немесе хаттың суреті<input id="a-file" type="file" accept="image/*"></label>' +
+      '<p class="hint">Мәтін жазыңыз, хаттың суретін (қолмен жазылған не безендірілген хат) салыңыз немесе екеуін де қосыңыз.</p>' +
+      formFoot("Хатты салу") + "</form>";
+  }
+
   /* ---------- page ---------- */
   var EMPTY = {
+    letters: "<b>Әзірге алғыс хат жоқ</b>Әңгіме айтқан үлкендерге арналған алғыс хаттарды осында жинаңыз: мәтін түрінде жазуға не хаттың суретін салуға болады.",
     stories: "<b>Әзірге әңгіме жоқ</b>Алғашқы жазбаны оқушылар салады. Мұнда әр әңгіменің атауы, айтушысы, ауылы, ойнатқышы және алғыс хаты көрінеді.",
     photos: "<b>Әзірге сурет жоқ</b>Үлкендердің қолындағы ескі суреттерді телефонмен түсіріп, жылын және кім екенін жазып салыңыз.",
     words: "<b>Сөздік әзірге бос</b>Әңгімелерде естіген ұмыт бола бастаған сөздерді (келсап, ошақ, кебеже…) мағынасымен осында жинаңыз."
   };
-  var ADD_LABEL = { stories: "+ Әңгіме қосу", photos: "+ Сурет қосу", words: "+ Сөз қосу" };
-  var FORM_OF = { stories: "story", photos: "photo", words: "word" };
-  var UNIT = { stories: "әңгіме", photos: "сурет", words: "сөз" };
+  var ADD_LABEL = { stories: "+ Әңгіме қосу", photos: "+ Сурет қосу", words: "+ Сөз қосу", letters: "+ Хат қосу" };
+  var FORM_OF = { stories: "story", photos: "photo", words: "word", letters: "letter" };
+  var UNIT = { stories: "әңгіме", photos: "сурет", words: "сөз", letters: "хат" };
   var INTRO = {
+    letters: '<p class="secintro">Оқушылардың әңгіме айтқан ата-әжелерге арнаған алғыс хаттары.</p>',
     stories: '<section class="how" aria-label="Қалай жұмыс істейді"><div><b>Тыңдау</b><p>Үлкен кісінің әңгімесін оқушы телефонға жазып алады.</p></div><div><b>Жүктеу</b><p>Мұғалім берген құпиясөзбен кіріп, «Әңгіме қосу» батырмасымен жазбаны салады.</p></div><div><b>Тарату</b><p>Жазба осында сақталады, оны бәрі күні-түні тыңдай алады.</p></div></section>',
     photos: '<p class="secintro">Ауылдың, мектептің, отбасылардың ескі суреттері. Суретті басып, үлкейтіп көріңіз.</p>',
     words: '<p class="secintro">Үлкендердің әңгімесінде кездескен, бүгін сирек айтылатын сөздер және олардың мағынасы.</p>'
@@ -228,6 +261,7 @@
     if (ui.loadError) return { count: "", html: '<div class="empty"><b>Деректер жүктелмеді</b>Интернетті тексеріп, қайталап көріңіз.<br><br><button class="btn ghost" data-act="reload">Қайталау</button></div>' };
     if (k === "stories") { list = storiesFiltered(); html = list.length ? '<div class="list">' + list.map(storyHtml).join("") + "</div>" : ""; }
     else if (k === "photos") { list = photosFiltered(); html = list.length ? '<div class="photos">' + list.map(photoHtml).join("") + "</div>" : ""; }
+    else if (k === "letters") { list = lettersFiltered(); html = list.length ? '<div class="list">' + list.map(letterHtml).join("") + "</div>" : ""; }
     else { list = wordsFiltered(); html = list.length ? wordsHtml(list) : ""; }
     if (!list.length) html = '<div class="empty">' + (data[k].length ? "<b>Ештеңе табылмады</b>Басқа сөзбен іздеп көріңіз." : EMPTY[k]) + "</div>";
     var cnt = list.length + " " + UNIT[k] + (list.length !== data[k].length ? " (барлығы " + data[k].length + ")" : "");
@@ -249,7 +283,7 @@
       }).join("") + "</div></nav>" +
       '<main><div class="wrap">' + INTRO[k] +
       (ui.loginOpen ? loginPanel() : "") +
-      (formMine ? (k === "stories" ? storyForm() : k === "photos" ? photoForm() : wordForm()) : "") +
+      (formMine ? (k === "stories" ? storyForm() : k === "photos" ? photoForm() : k === "letters" ? letterForm() : wordForm()) : "") +
       '<div class="tools"><input type="search" id="q" placeholder="Іздеу…" value="' + esc(ui.q) + '" aria-label="Іздеу">' +
       (canAdd() && !formMine ? '<button class="btn" data-act="add">' + ADD_LABEL[k] + "</button>" : "") +
       (!canAdd() && configured && !ui.loginOpen ? '<button class="btn ghost" data-act="login-open">Материал қосу</button>' : "") + "</div>" +
@@ -283,6 +317,7 @@
     if (!ui.lightbox) return "";
     var p = null;
     data.photos.forEach(function (x) { if (x.id === ui.lightbox) p = x; });
+    if (!p) data.letters.forEach(function (x) { if (x.id === ui.lightbox && x.media_path) p = { media_path: x.media_path, caption: "Алғыс хат: " + x.to_whom }; });
     if (!p) return "";
     return '<div class="lightbox" data-act="unzoom" role="dialog" aria-label="Сурет"><button class="close" data-act="unzoom">Жабу ✕</button><figure><img src="' + esc(mediaUrl(p.media_path)) + '" alt="' + esc(p.caption) + '"><figcaption>' + (p.year ? esc(p.year) + " · " : "") + esc(p.caption) + "</figcaption></figure></div>";
   }
@@ -301,10 +336,13 @@
     Promise.all([
       sb.from("stories").select("*").order("created_at", { ascending: false }),
       sb.from("photos").select("*").order("created_at", { ascending: false }),
-      sb.from("words").select("*").order("word")
+      sb.from("words").select("*").order("word"),
+      sb.from("letters").select("*").order("created_at", { ascending: false })
     ]).then(function (r) {
       if (r[0].error || r[1].error || r[2].error) throw r[0].error || r[1].error || r[2].error;
       data.stories = r[0].data || []; data.photos = r[1].data || []; data.words = r[2].data || [];
+      data.letters = r[3].error ? [] : (r[3].data || []);
+      if (r[3].error) console.error(r[3].error);
       ui.loading = false; render();
     }).catch(function (e) {
       console.error(e);
@@ -471,6 +509,28 @@
       }, function (e) { console.error(e); fail(uploadErrText(e)); });
     });
   }
+  function submitLetter() {
+    var fileEl = document.getElementById("a-file");
+    var file = fileEl && fileEl.files[0];
+    if (!g("a-to")) return fail("Хат кімге арналғанын жазыңыз.");
+    if (!g("a-body") && !file) return fail("Хаттың мәтінін жазыңыз не суретін таңдаңыз.");
+    var row = { to_whom: g("a-to"), author: g("a-author") || null, story_id: g("a-story") || null, body: g("a-body") || null, media_path: null };
+    ui.busy = true; ui.err = false; ui.msg = file ? "Сурет дайындалуда…" : "Сақталуда…"; render();
+    var step = file ? shrinkImage(file).then(function (b) {
+      if (!b) throw { code: "img" };
+      if (b.size > MAX_BYTES) throw { code: "big" };
+      setMsg("Сурет жүктелуде…"); setProgress(0);
+      return uploadFile(b, "letters/" + uid() + ".jpg", b.type || "image/jpeg").then(function (p) { row.media_path = p; });
+    }) : Promise.resolve();
+    step.then(function () {
+      setMsg("Сақталуда…");
+      return insertRow("letters", row).then(done, function (e) { console.error(e); fail(dbErrText(e)); });
+    }, function (e) {
+      console.error(e);
+      fail(e && e.code === "img" ? "Бұл суретті ашу мүмкін болмады. JPG не PNG пішіміндегі суретті таңдаңыз." : e && e.code === "big" ? "Сурет тым үлкен." : uploadErrText(e));
+    });
+  }
+
   function submitWord() {
     if (!g("w-word") || !g("w-meaning")) return fail("Сөзді және оның мағынасын жазыңыз.");
     var w = g("w-word").toLowerCase();
@@ -518,7 +578,7 @@
     e.preventDefault();
     if (f === "login") return submitLogin();
     if (ui.busy) return;
-    if (f === "story") submitStory(); else if (f === "photo") submitPhoto(); else if (f === "word") submitWord();
+    if (f === "story") submitStory(); else if (f === "photo") submitPhoto(); else if (f === "word") submitWord(); else if (f === "letter") submitLetter();
   });
 
   app.addEventListener("click", function (e) {
